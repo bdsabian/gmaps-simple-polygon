@@ -221,6 +221,7 @@ export class Polygon {
 		this.listOfDots = listOfDots;
 		this.map = options['map'];
 		this.id = options['id'];
+		this.meta = options['meta'] || {}
 		this.isDragging = false;
 		this.callbackContext = options['callbackContext'] || this;
 		this.callbacks = {
@@ -257,7 +258,7 @@ export class Polygon {
 		const paths = this.getPlots();
 
 		paths.getAt(0).forEach(path => {
-			data.push({lat: path.A, lng: path.F})
+			data.push({lat: path.lat(), lng: path.lng()})
 		});
 		return data;
 	}
@@ -297,8 +298,27 @@ export class Polygon {
 		this.polygonObj.setMap(this.map);
 	}
 
+	setMeta() {
+		if(arguments.length==1) {
+			this.meta = arguments[0];
+		} else if(arguments.length > 1) {
+			let key = arguments[0];
+			let value = arguments[1];
+			this.meta[key] = value;
+		}
+	}
+
+	getMeta() {
+		if(arguments.length==0) {
+			return this.meta;
+		} else {
+			let key = arguments[0];
+			return this.meta[key];
+		}
+	}
+
 	addDot(value) {
-		const latLng = (value instanceof Dot) ? value.latLng : value;
+		const latLng = (value instanceof Dot) ? value.latLng : this._coordFromJson(value);
 		this.coords.push(latLng);
 	}
 
@@ -394,6 +414,19 @@ export class Polygon {
 
 		this.events = new Array;
 	}
+
+	_coordFromJson(coord) {
+		coord.lat = parseFloat(coord.lat);
+		coord.lng = parseFloat(coord.lng);
+		return coord;
+	}
+
+	_merge_objects(obj1,obj2){
+	    var obj3 = {};
+	    for (var attrname in obj1) { obj3[attrname] = obj1[attrname]; }
+	    for (var attrname in obj2) { obj3[attrname] = obj2[attrname]; }
+	    return obj3;
+	}
 }
 
 export class PolygonManager {
@@ -408,6 +441,7 @@ export class PolygonManager {
     this.drawColor = options['drawColor'] || '#000';
     this.newPolygonColor = options['newPolygonColor'];
     this.selectMultiple = options['selectMultiple'] || false;
+    this.disableDeselect = options['disableDeselect'] || false;
 
     if(options['editable'] !== null && options['editable'] !== undefined){
     	this.editable = options['editable'];
@@ -518,8 +552,10 @@ export class PolygonManager {
   }
 
   deselectPolygon(polygon) {
-  	polygon.deselect();
-  	this._removeFromArray(this.selectedPolygons, polygon);
+  	if(!this.disableDeselect) {
+	  	polygon.deselect();
+	  	this._removeFromArray(this.selectedPolygons, polygon);
+  	}
   }
 
   deselectPolygons(polygonArr) {
@@ -663,7 +699,7 @@ export class PolygonManager {
   }
 
   _objectToPolygon(obj) {
-  	return new Polygon(obj['coords'], {id: obj['id'], color: obj['color']});
+  	return new Polygon(obj['coords'], {id: obj['id'], meta: obj['meta'], color: obj['color']});
   }
 }
 
